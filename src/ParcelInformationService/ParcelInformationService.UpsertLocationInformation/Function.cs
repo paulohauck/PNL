@@ -15,25 +15,28 @@ namespace ParcelInformationService.UpsertLocationInformation;
 
 public class Function
 {
-    private readonly IServiceCollection _serviceCollection;
-    private readonly IConfiguration _configuration;
-    private readonly ServiceProvider _serviceProvider;
+    private readonly ILocationService _locationService;
 
     public Function()
     {
         var configurationBuilder = new ConfigurationBuilder().AddEnvironmentVariables();
-        _configuration = configurationBuilder.Build();
+        var configuration = configurationBuilder.Build();
 
-        _serviceCollection = new ServiceCollection()
-            .InstallDatabase(_configuration)
+        var serviceCollection = new ServiceCollection()
+            .InstallDatabase(configuration)
             .InstallApplication();
-        _serviceProvider = _serviceCollection.BuildServiceProvider();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        _locationService = serviceProvider.GetRequiredService<ILocationService>();
+    }
+
+    public Function(ILocationService locationService)
+    {
+        _locationService = locationService;
     }
 
     public async Task Handler(SQSEvent evt, ILambdaContext context)
     {
-        var service = _serviceProvider.GetRequiredService<ILocationService>();
-        
         foreach (var message in evt.Records)
         {
             context.Logger.LogLine($"Processed message: {message.MessageId}");
@@ -43,12 +46,13 @@ public class Function
                 var location = JsonSerializer.Deserialize<LocationMessage>(message.Body);
                 if (location != null)
                 {
-                    await service.SaveAsync(location.ToModel());
+                    await _locationService.SaveAsync(location.ToModel());
                 }
             }
             catch (Exception ex)
             {
                 context.Logger.LogLine($"Failed to process message {message.MessageId} with error: {ex.Message} ");
+                throw;
             }
         }
     }

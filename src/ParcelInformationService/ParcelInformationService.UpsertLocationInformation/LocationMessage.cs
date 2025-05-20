@@ -3,7 +3,7 @@ using ParcelInformationService.Domain.Models;
 
 namespace ParcelInformationService.UpsertLocationInformation
 {
-    internal class LocationMessage
+    public class LocationMessage
     {
         public required string Id { get; set; }
         public required string Name { get; set; }
